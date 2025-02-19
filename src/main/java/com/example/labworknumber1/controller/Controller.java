@@ -15,7 +15,7 @@ public class Controller {
     }
 
     @GetMapping("/anime/{animeId}")
-    public Map<String, Integer> getPathBook(@PathVariable("animeId") Integer bookId) {
-        return Collections.singletonMap("animeId", bookId);
+    public Map<String, Integer> getPathBook(@PathVariable("animeId") Integer animeId) {
+        return Collections.singletonMap("animeId", animeId);
     }
 }
