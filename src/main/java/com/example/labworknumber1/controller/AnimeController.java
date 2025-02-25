@@ -1,6 +1,7 @@
 package com.example.labworknumber1.controller;
 
 import com.example.labworknumber1.model.AnimeSeries;
+import com.example.labworknumber1.service.AnimeService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,15 +12,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class AnimeController {
 
+    private final AnimeService animeService;
+
+    public AnimeController(AnimeService animeService) {
+        this.animeService = animeService;
+    }
+
     @GetMapping("/anime")
     public AnimeSeries getQueryAnime(@RequestParam("name") String name,
                                      @RequestParam("id") Integer id) {
-        return new AnimeSeries(name, id);
+        return animeService.createAnimeSeries(name, id);
     }
 
     @GetMapping("/anime/{animeId}/{name}")
     public AnimeSeries getPathAnime(@PathVariable("animeId") Integer animeId,
                                     @PathVariable("name") String name) {
-        return new AnimeSeries(name, animeId);
+        return animeService.createAnimeSeries(name, animeId);
     }
 }
