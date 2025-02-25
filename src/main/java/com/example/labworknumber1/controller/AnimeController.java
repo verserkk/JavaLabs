@@ -17,9 +17,9 @@ public class AnimeController {
         return new AnimeSeries(name, id);
     }
 
-    @GetMapping("/anime/{animeId}")
+    @GetMapping("/anime/{animeId}/{name}")
     public AnimeSeries getPathAnime(@PathVariable("animeId") Integer animeId,
-                                    @RequestParam("name") String name) {
+                                    @PathVariable("name") String name) {
         return new AnimeSeries(name, animeId);
     }
 }
