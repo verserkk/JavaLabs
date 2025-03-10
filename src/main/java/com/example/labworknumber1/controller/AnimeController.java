@@ -19,14 +19,12 @@ public class AnimeController {
     }
 
     @GetMapping("/anime")
-    public AnimeSeries getQueryAnime(@RequestParam("name") String name,
-                                     @RequestParam("id") Integer id) {
-        return animeService.createAnimeSeries(name, id);
+    public AnimeSeries getQueryAnime(@RequestParam("name") String name) {
+        return animeService.getAnimeByName(name);
     }
 
-    @GetMapping("/anime/{animeId}/{name}")
-    public AnimeSeries getPathAnime(@PathVariable("animeId") Integer animeId,
-                                    @PathVariable("name") String name) {
-        return animeService.createAnimeSeries(name, animeId);
+    @GetMapping("/anime/{animeId}")
+    public AnimeSeries getPathAnime(@PathVariable("animeId") Integer animeId) {
+        return animeService.getAnimeById(animeId);
     }
 }
