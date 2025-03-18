@@ -31,7 +31,7 @@ public class AnimeService {
     public AnimeSeries getAnimeByName(String name) {
         return animeDatabase.values().stream()
                 .filter(anime -> anime.getName().equalsIgnoreCase(name))
-                .findFirst()
+                .findAny()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Anime not found"));
     }

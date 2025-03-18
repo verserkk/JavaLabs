@@ -27,4 +27,6 @@ public class AnimeController {
     public AnimeSeries getPathAnime(@PathVariable("animeId") Integer animeId) {
         return animeService.getAnimeById(animeId);
     }
+
+
 }
