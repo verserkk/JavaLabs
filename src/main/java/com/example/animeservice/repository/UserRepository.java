@@ -11,10 +11,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
-
-    Optional<User> findByEmail(String email);
-
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
@@ -31,4 +27,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("username") String username,
             @Param("email") String email
     );
+
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.collections WHERE u.id = :id")
+    Optional<User> findByIdWithCollections(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.collections")
+    List<User> findAllWithCollections();
 }

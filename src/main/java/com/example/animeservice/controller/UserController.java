@@ -1,6 +1,8 @@
 package com.example.animeservice.controller;
 
+
 import com.example.animeservice.dto.UserDto;
+import com.example.animeservice.dto.UserWithCollectionsDto;
 import com.example.animeservice.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -53,11 +55,27 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id}/full")
+    public ResponseEntity<UserWithCollectionsDto>
+        getUserWithCollectionsAndAnime(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserWithCollectionsAndAnime(id));
+    }
+
+    @GetMapping("/full")
+    public ResponseEntity<List<UserWithCollectionsDto>>
+        getAllUserWithCollectionsAndAnime() {
+        return ResponseEntity.ok(userService.getAllUsersWithCollectionsAndAnimes());
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<UserDto>> searchUsers(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String email
     ) {
-        return ResponseEntity.ok(userService.searchUsers(username, email));
+        List<UserDto> list = userService.searchUsers(username, email);
+        if (list.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+        return ResponseEntity.ok(list);
     }
 }

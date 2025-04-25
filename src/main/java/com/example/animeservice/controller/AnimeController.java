@@ -60,6 +60,10 @@ public class AnimeController {
             @RequestParam(required = false) String genre,
             @RequestParam(required = false) Integer year
     ) {
-        return ResponseEntity.ok(animeService.searchAnimes(title, genre, year));
+        List<AnimeDto> list = animeService.searchAnimes(title, genre, year);
+        if (list.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+        return ResponseEntity.ok(list);
     }
 }

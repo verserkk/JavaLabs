@@ -1,6 +1,7 @@
 package com.example.animeservice.controller;
 
 import com.example.animeservice.dto.CollectionDto;
+import com.example.animeservice.dto.CollectionWithAnimeDto;
 import com.example.animeservice.service.CollectionService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -65,5 +66,16 @@ public class CollectionController {
             @RequestParam(required = false) Long animeId
     ) {
         return ResponseEntity.ok(collectionService.searchCollections(name, animeId));
+    }
+
+    @GetMapping("/search/anime")
+    public ResponseEntity<List<CollectionWithAnimeDto>> searchCollectionsWithAnime(
+        @RequestParam(required = false) String title,
+        @RequestParam(required = false) String genre,
+        @RequestParam(required = false) Integer releaseYear
+    ) {
+        List<CollectionWithAnimeDto> list =
+                collectionService.searchCollectionsByAnimeParams(title, genre, releaseYear);
+        return ResponseEntity.ok(list);
     }
 }

@@ -8,8 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -33,5 +32,5 @@ public class Anime {
 
     @ManyToMany(mappedBy = "animes")
     @JsonBackReference
-    private Set<Collection> collections = new HashSet<>();
+    private List<Collection> collections;
 }

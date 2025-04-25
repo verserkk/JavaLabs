@@ -1,6 +1,7 @@
 package com.example.animeservice.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,8 +14,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -39,11 +39,13 @@ public class Collection {
     @JsonBackReference
     private User user;
 
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private CascadeType orphanRemoval;
+    @ManyToMany(cascade = {CascadeType.PERSIST})
     @JoinTable(
             name = "collection_anime",
             joinColumns = @JoinColumn(name = "collection_id"),
             inverseJoinColumns = @JoinColumn(name = "anime_id")
     )
-    private Set<Anime> animes = new HashSet<>();
+    @JsonManagedReference
+    private List<Anime> animes;
 }

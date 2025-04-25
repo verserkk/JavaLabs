@@ -1,7 +1,8 @@
 package com.example.animeservice.service;
 
-
+import com.example.animeservice.dto.AnimeDto;
 import com.example.animeservice.dto.CollectionDto;
+import com.example.animeservice.dto.CollectionWithAnimeDto;
 import com.example.animeservice.exception.EntityNotFoundException;
 import com.example.animeservice.model.Anime;
 import com.example.animeservice.model.Collection;
@@ -9,15 +10,18 @@ import com.example.animeservice.model.User;
 import com.example.animeservice.repository.AnimeRepository;
 import com.example.animeservice.repository.CollectionRepository;
 import com.example.animeservice.repository.UserRepository;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CollectionService {
@@ -50,7 +54,7 @@ public class CollectionService {
         collection.setUser(user);
 
         if (dto.getAnimeIds() != null && !dto.getAnimeIds().isEmpty()) {
-            Set<Anime> animes = new HashSet<>(animeRepository.findAllById(dto.getAnimeIds()));
+            List<Anime> animes = animeRepository.findAllById(dto.getAnimeIds());
             if (animes.size() != dto.getAnimeIds().size()) {
                 throw new EntityNotFoundException("One or more anime not found");
             }
@@ -79,7 +83,7 @@ public class CollectionService {
         }
 
         if (dto.getAnimeIds() != null) {
-            Set<Anime> animes = new HashSet<>(animeRepository.findAllById(dto.getAnimeIds()));
+            List<Anime> animes = animeRepository.findAllById(dto.getAnimeIds());
             if (animes.size() != dto.getAnimeIds().size()) {
                 throw new EntityNotFoundException("One or more anime not found");
             }
@@ -108,29 +112,31 @@ public class CollectionService {
     }
 
     public List<CollectionDto> searchCollections(String name, Long animeId) {
+        List<CollectionDto> result;
         if (name != null && animeId != null) {
-            return collectionRepository.findByNameContainingIgnoreCase(name)
+            result = collectionRepository.findByNameContainingIgnoreCase(name)
                     .stream()
                     .filter(collection -> collection.getAnimes().stream()
                             .anyMatch(anime -> anime.getId().equals(animeId)))
                     .map(this::convertToDto)
-                    .collect(Collectors.toList());
+                    .toList();
         } else if (name != null) {
-            return collectionRepository.findByNameContainingIgnoreCase(name)
+            result = collectionRepository.findByNameContainingIgnoreCase(name)
                     .stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } else if (animeId != null) {
-            return collectionRepository.findByAnimesId(animeId)
+            result = collectionRepository.findByAnimesId(animeId)
                     .stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } else {
-            return collectionRepository.findAll()
-                    .stream()
-                    .map(this::convertToDto)
-                    .collect(Collectors.toList());
+            throw new IllegalArgumentException("At least one anime must be provided");
         }
+        if (result.isEmpty()) {
+            throw new EntityNotFoundException("Collection not found");
+        }
+        return result;
     }
 
     private CollectionDto convertToDto(Collection collection) {
@@ -140,7 +146,47 @@ public class CollectionService {
         dto.setUserId(collection.getUser().getId());
         dto.setAnimeIds(collection.getAnimes().stream()
                 .map(Anime::getId)
-                .collect(Collectors.toSet()));
+                .collect(Collectors.toList()));
         return dto;
     }
+
+    @Transactional(readOnly = true)
+    public List<CollectionWithAnimeDto>
+        searchCollectionsByAnimeParams(String title, String genre, Integer releaseYear) {
+        if (title == null && genre == null && releaseYear == null) {
+            throw new IllegalArgumentException("At least one parameter must be provided");
+        }
+
+        List<Object[]> results = collectionRepository
+                .searchCollectionsWithAnimeByParams(title, genre, releaseYear);
+
+        Map<Long, CollectionWithAnimeDto> collectionMap = new LinkedHashMap<>();
+
+        for (Object[] row : results) {
+            Long collectionId = ((Number) row[0]).longValue();
+            String collectionName = (String) row[1];
+            Long animeId = ((Number) row[2]).longValue();
+            String animeTitle = (String) row[3];
+            String animeGenre = (String) row[4];
+            Integer animeYear = (row[5] != null) ? ((Number) row[5]).intValue() : null;
+
+            CollectionWithAnimeDto collectionDto = collectionMap
+                    .computeIfAbsent(collectionId, id -> {
+                        CollectionWithAnimeDto dto = new CollectionWithAnimeDto();
+                        dto.setId(id);
+                        dto.setName(collectionName);
+                        dto.setAnimes(new ArrayList<>());
+                        return dto;
+                    });
+
+            AnimeDto animeDto = new AnimeDto(animeId, animeTitle, animeGenre, animeYear);
+
+            collectionDto.getAnimes().add(animeDto);
+        }
+        if (collectionMap.isEmpty()) {
+            throw new EntityNotFoundException("Collection not found");
+        }
+        return new ArrayList<>(collectionMap.values());
+    }
+
 }

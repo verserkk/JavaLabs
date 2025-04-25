@@ -3,7 +3,9 @@ package com.example.animeservice.service;
 import com.example.animeservice.dto.AnimeDto;
 import com.example.animeservice.exception.EntityNotFoundException;
 import com.example.animeservice.model.Anime;
+import com.example.animeservice.model.Collection;
 import com.example.animeservice.repository.AnimeRepository;
+import com.example.animeservice.repository.CollectionRepository;
 import com.example.animeservice.specs.AnimeSpecifications;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AnimeService {
     private final AnimeRepository animeRepository;
+    private final CollectionRepository collectionRepository;
 
     public List<AnimeDto> getAllAnimes() {
         return animeRepository.findAll(Sort.by("title"))
@@ -55,10 +58,16 @@ public class AnimeService {
 
     @Transactional
     public void deleteAnime(Long id) {
-        if (!animeRepository.existsById(id)) {
-            throw new EntityNotFoundException("Anime not found with id: " + id);
+        Anime anime = animeRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Anime not found with id: " + id));
+
+        List<Collection> collections = anime.getCollections();
+        for (Collection collection : collections) {
+            collection.getAnimes().remove(anime);
         }
-        animeRepository.deleteById(id);
+        collectionRepository.saveAll(collections);
+
+        animeRepository.delete(anime);
     }
 
 
