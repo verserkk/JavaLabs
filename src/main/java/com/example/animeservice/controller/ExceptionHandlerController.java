@@ -44,6 +44,7 @@ public class ExceptionHandlerController {
         return ResponseEntity.badRequest().body(response);
     }
 
+
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoHandlerFound(NoHandlerFoundException ex) {
         ErrorResponse response = new ErrorResponse();

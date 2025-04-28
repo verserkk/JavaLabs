@@ -16,12 +16,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
     private final UserRepository userRepository;
     private final CollectionRepository collectionRepository;
+    private final CacheService cacheService;
 
     public List<UserDto> getAllUsers() {
         return userRepository.findAll()
@@ -31,9 +32,17 @@ public class UserService {
     }
 
     public UserDto getUserById(Long id) {
-        return userRepository.findById(id)
+        String cacheKey = "user_" + id;
+        UserDto cached = (UserDto) cacheService.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        UserDto result = userRepository.findById(id)
                 .map(this::convertToDto)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "User not found with id: " + id));
+        cacheService.put(cacheKey, result);
+        return result;
     }
 
     @Transactional
@@ -48,13 +57,16 @@ public class UserService {
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
-        return convertToDto(userRepository.save(user));
+        UserDto result = convertToDto(userRepository.save(user));
+        invalidateUserCache();
+        return result;
     }
 
     @Transactional
     public UserDto updateUser(Long id, UserDto dto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "User not found with id: " + id));
 
         if (!user.getUsername().equals(dto.getUsername())
                 && userRepository.existsByUsername(dto.getUsername())) {
@@ -68,7 +80,9 @@ public class UserService {
 
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
-        return convertToDto(userRepository.save(user));
+        UserDto result = convertToDto(userRepository.save(user));
+        invalidateUserCache();
+        return result;
     }
 
     @Transactional
@@ -77,27 +91,43 @@ public class UserService {
             throw new EntityNotFoundException("User not found with id: " + id);
         }
         userRepository.deleteById(id);
+
+        // Invalidate cache entries related to this user
+        cacheService.invalidate("user_" + id);
+        cacheService.invalidateByPrefix("user_search_");
+        cacheService.invalidateByPrefix("user_collections_");
+        cacheService.invalidateByPrefix("collections_user_" + id);
     }
 
     public List<UserDto> searchUsers(String username, String email) {
+        String cacheKey = "user_search_" + (username != null ? username : "") + "_"
+                + (email != null ? email : "");
+        @SuppressWarnings("unchecked")
+        List<UserDto> cached = (List<UserDto>) cacheService.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        List<UserDto> result;
         if (username != null && email != null) {
-            return userRepository.searchByUsernameOrEmail(username, email)
+            result = userRepository.searchByUsernameOrEmail(username, email)
                     .stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } else if (username != null) {
-            return userRepository.findByUsernameContainingIgnoreCase(username)
+            result = userRepository.findByUsernameContainingIgnoreCase(username)
                     .stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } else if (email != null) {
-            return userRepository.findByEmailContainingIgnoreCase(email)
+            result = userRepository.findByEmailContainingIgnoreCase(email)
                     .stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } else {
-            return getAllUsers();
+            result = getAllUsers();
         }
+        cacheService.put(cacheKey, result);
+        return result;
     }
 
     private UserDto convertToDto(User user) {
@@ -110,13 +140,21 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserWithCollectionsDto getUserWithCollectionsAndAnime(Long userId) {
+        String cacheKey = "user_collections_" + userId;
+        UserWithCollectionsDto cached =
+                (UserWithCollectionsDto) cacheService.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
         User user = userRepository.findByIdWithCollections(userId)
-                .orElseThrow(() -> new
-                        EntityNotFoundException("User not found with id: " + userId));
-        List<Collection> collections
-                = collectionRepository.fetchCollectionsWithAnimes(user.getCollections());
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "User not found with id: " + userId));
+        List<Collection> collections =
+                collectionRepository.fetchCollectionsWithAnimes(user.getCollections());
         user.setCollections(collections);
-        return mapToUserWithCollectionsDto(user);
+        UserWithCollectionsDto result = mapToUserWithCollectionsDto(user);
+        cacheService.put(cacheKey, result);
+        return result;
     }
 
     private UserWithCollectionsDto mapToUserWithCollectionsDto(User user) {
@@ -154,8 +192,8 @@ public class UserService {
                 .flatMap(user -> user.getCollections().stream())
                 .distinct()
                 .collect(Collectors.toList());
-        List<Collection> collectionsWithAnimes
-                = collectionRepository.fetchCollectionsWithAnimes(allCollections);
+        List<Collection> collectionsWithAnimes =
+                collectionRepository.fetchCollectionsWithAnimes(allCollections);
         Map<Long, Collection> collectionMap = collectionsWithAnimes.stream()
                 .collect(Collectors.toMap(Collection::getId, c -> c));
 
@@ -168,5 +206,12 @@ public class UserService {
         return users.stream()
                 .map(this::mapToUserWithCollectionsDto)
                 .collect(Collectors.toList());
+    }
+
+    private void invalidateUserCache() {
+        cacheService.invalidateByPrefix("user_");
+        cacheService.invalidateByPrefix("user_search_");
+        cacheService.invalidateByPrefix("user_collections_");
+        cacheService.invalidateByPrefix("collections_user_");
     }
 }

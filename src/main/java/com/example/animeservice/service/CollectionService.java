@@ -20,14 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CollectionService {
+
     private final CollectionRepository collectionRepository;
     private final UserRepository userRepository;
     private final AnimeRepository animeRepository;
+    private final CacheService cacheService;
 
     public List<CollectionDto> getAllCollections() {
         return collectionRepository.findAll()
@@ -37,17 +38,24 @@ public class CollectionService {
     }
 
     public CollectionDto getCollectionById(Long id) {
-        return collectionRepository.findById(id)
+        String cacheKey = "collection_" + id;
+        CollectionDto cached = (CollectionDto) cacheService.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        CollectionDto result = collectionRepository.findById(id)
                 .map(this::convertToDto)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("Collection not found with id: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Collection not found with id: " + id));
+        cacheService.put(cacheKey, result);
+        return result;
     }
 
     @Transactional
     public CollectionDto createCollection(CollectionDto dto) {
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() ->
-                        new EntityNotFoundException("User not found with id: " + dto.getUserId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "User not found with id: " + dto.getUserId()));
 
         Collection collection = new Collection();
         collection.setName(dto.getName());
@@ -61,14 +69,16 @@ public class CollectionService {
             collection.setAnimes(animes);
         }
 
-        return convertToDto(collectionRepository.save(collection));
+        CollectionDto result = convertToDto(collectionRepository.save(collection));
+        invalidateCollectionCache();
+        return result;
     }
 
     @Transactional
     public CollectionDto updateCollection(Long id, CollectionDto dto) {
         Collection collection = collectionRepository.findById(id)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("Collection not found with id: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Collection not found with id: " + id));
 
         if (dto.getName() != null) {
             collection.setName(dto.getName());
@@ -76,9 +86,8 @@ public class CollectionService {
 
         if (dto.getUserId() != null && !dto.getUserId().equals(collection.getUser().getId())) {
             User user = userRepository.findById(dto.getUserId())
-                    .orElseThrow(() ->
-                            new EntityNotFoundException("User not found with id: "
-                                    + dto.getUserId()));
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "User not found with id: " + dto.getUserId()));
             collection.setUser(user);
         }
 
@@ -90,7 +99,9 @@ public class CollectionService {
             collection.setAnimes(animes);
         }
 
-        return convertToDto(collectionRepository.save(collection));
+        CollectionDto result = convertToDto(collectionRepository.save(collection));
+        invalidateCollectionCache();
+        return result;
     }
 
     @Transactional
@@ -99,19 +110,41 @@ public class CollectionService {
             throw new EntityNotFoundException("Collection not found with id: " + id);
         }
         collectionRepository.deleteById(id);
+
+        // Invalidate cache entries related to this collection
+        cacheService.invalidate("collection_" + id);
+        cacheService.invalidateByPrefix("collections_user_");
+        cacheService.invalidateByPrefix("collection_search_");
+        cacheService.invalidateByPrefix("collection_search_anime_");
+        cacheService.invalidateByPrefix("user_collections_");
     }
 
     public List<CollectionDto> getCollectionsByUser(Long userId) {
+        String cacheKey = "collections_user_" + userId;
+        @SuppressWarnings("unchecked")
+        List<CollectionDto> cached = (List<CollectionDto>) cacheService.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
         if (!userRepository.existsById(userId)) {
             throw new EntityNotFoundException("User not found with id: " + userId);
         }
-        return collectionRepository.findByUserId(userId)
+        List<CollectionDto> result = collectionRepository.findByUserId(userId)
                 .stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+        cacheService.put(cacheKey, result);
+        return result;
     }
 
     public List<CollectionDto> searchCollections(String name, Long animeId) {
+        String cacheKey = "collection_search_" + (name != null ? name : "") + "_"
+                + (animeId != null ? animeId : "");
+        @SuppressWarnings("unchecked")
+        List<CollectionDto> cached = (List<CollectionDto>) cacheService.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
         List<CollectionDto> result;
         if (name != null && animeId != null) {
             result = collectionRepository.findByNameContainingIgnoreCase(name)
@@ -119,7 +152,7 @@ public class CollectionService {
                     .filter(collection -> collection.getAnimes().stream()
                             .anyMatch(anime -> anime.getId().equals(animeId)))
                     .map(this::convertToDto)
-                    .toList();
+                    .collect(Collectors.toList());
         } else if (name != null) {
             result = collectionRepository.findByNameContainingIgnoreCase(name)
                     .stream()
@@ -131,28 +164,26 @@ public class CollectionService {
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } else {
-            throw new IllegalArgumentException("At least one anime must be provided");
+            throw new IllegalArgumentException("At least one parameter must be provided");
         }
         if (result.isEmpty()) {
             throw new EntityNotFoundException("Collection not found");
         }
+        cacheService.put(cacheKey, result);
         return result;
     }
 
-    private CollectionDto convertToDto(Collection collection) {
-        CollectionDto dto = new CollectionDto();
-        dto.setId(collection.getId());
-        dto.setName(collection.getName());
-        dto.setUserId(collection.getUser().getId());
-        dto.setAnimeIds(collection.getAnimes().stream()
-                .map(Anime::getId)
-                .collect(Collectors.toList()));
-        return dto;
-    }
-
     @Transactional(readOnly = true)
-    public List<CollectionWithAnimeDto>
-        searchCollectionsByAnimeParams(String title, String genre, Integer releaseYear) {
+    public List<CollectionWithAnimeDto> searchCollectionsByAnimeParams(
+            String title, String genre, Integer releaseYear) {
+        String cacheKey = "collection_search_anime_" + (title != null ? title : "") + "_"
+                + (genre != null ? genre : "") + "_" + (releaseYear != null ? releaseYear : "");
+        @SuppressWarnings("unchecked")
+        List<CollectionWithAnimeDto> cached =
+                (List<CollectionWithAnimeDto>) cacheService.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
         if (title == null && genre == null && releaseYear == null) {
             throw new IllegalArgumentException("At least one parameter must be provided");
         }
@@ -180,13 +211,32 @@ public class CollectionService {
                     });
 
             AnimeDto animeDto = new AnimeDto(animeId, animeTitle, animeGenre, animeYear);
-
             collectionDto.getAnimes().add(animeDto);
         }
         if (collectionMap.isEmpty()) {
             throw new EntityNotFoundException("Collection not found");
         }
-        return new ArrayList<>(collectionMap.values());
+        List<CollectionWithAnimeDto> result = new ArrayList<>(collectionMap.values());
+        cacheService.put(cacheKey, result);
+        return result;
     }
 
+    private CollectionDto convertToDto(Collection collection) {
+        CollectionDto dto = new CollectionDto();
+        dto.setId(collection.getId());
+        dto.setName(collection.getName());
+        dto.setUserId(collection.getUser().getId());
+        dto.setAnimeIds(collection.getAnimes().stream()
+                .map(Anime::getId)
+                .collect(Collectors.toList()));
+        return dto;
+    }
+
+    private void invalidateCollectionCache() {
+        cacheService.invalidateByPrefix("collection_");
+        cacheService.invalidateByPrefix("collections_user_");
+        cacheService.invalidateByPrefix("collection_search_");
+        cacheService.invalidateByPrefix("collection_search_anime_");
+        cacheService.invalidateByPrefix("user_collections_");
+    }
 }
