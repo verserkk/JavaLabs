@@ -1,7 +1,9 @@
-package com.example.animeservice.controller;
+package com.example.animeservice.exceptionhandler;
 
 import com.example.animeservice.dto.ErrorResponse;
 import com.example.animeservice.exception.EntityNotFoundException;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,9 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 public class ExceptionHandlerController {
 
     @ExceptionHandler(EntityNotFoundException.class)
+    @ApiResponses(value = {@ApiResponse(responseCode = "404",
+            description = "Entity not found")
+    })
     public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
         ErrorResponse response = new ErrorResponse();
         response.setStatus(HttpStatus.NOT_FOUND.value());
@@ -26,6 +31,9 @@ public class ExceptionHandlerController {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ApiResponses(value = {@ApiResponse(responseCode = "400",
+            description = "Validation error")
+    })
     public ResponseEntity<ErrorResponse>
         handleValidationExceptions(MethodArgumentNotValidException ex) {
         ErrorResponse response = new ErrorResponse();
@@ -36,6 +44,9 @@ public class ExceptionHandlerController {
     }
 
     @ExceptionHandler({IllegalArgumentException.class, MethodArgumentTypeMismatchException.class})
+    @ApiResponses(value = {@ApiResponse(responseCode = "400",
+            description = "Invalid argument")
+    })
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         ErrorResponse response = new ErrorResponse();
         response.setStatus(HttpStatus.BAD_REQUEST.value());
@@ -44,8 +55,10 @@ public class ExceptionHandlerController {
         return ResponseEntity.badRequest().body(response);
     }
 
-
     @ExceptionHandler(NoHandlerFoundException.class)
+    @ApiResponses(value = {@ApiResponse(responseCode = "404",
+            description = "Endpoint not found")
+    })
     public ResponseEntity<ErrorResponse> handleNoHandlerFound(NoHandlerFoundException ex) {
         ErrorResponse response = new ErrorResponse();
         response.setError("No Handler Found");
@@ -55,6 +68,9 @@ public class ExceptionHandlerController {
     }
 
     @ExceptionHandler(Exception.class)
+    @ApiResponses(value = {@ApiResponse(responseCode = "500",
+            description = "Unexpected server error")
+    })
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         ErrorResponse response = new ErrorResponse();
         response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
@@ -64,6 +80,9 @@ public class ExceptionHandlerController {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
+    @ApiResponses(value = {@ApiResponse(responseCode = "400",
+            description = "Database constraint violation")
+    })
     public ResponseEntity<ErrorResponse>
         handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         ErrorResponse response = new ErrorResponse();

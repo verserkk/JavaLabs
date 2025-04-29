@@ -79,9 +79,7 @@ public class AnimeService {
             collection.getAnimes().remove(anime);
         }
         collectionRepository.saveAll(collections);
-
         animeRepository.delete(anime);
-
         cacheService.invalidate("anime_" + id);
         cacheService.invalidateByPrefix("anime_search_");
         cacheService.invalidateByPrefix("collection_search_anime_");

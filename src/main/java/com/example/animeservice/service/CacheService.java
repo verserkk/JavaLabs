@@ -51,7 +51,7 @@ public class CacheService {
     }
 
     @Scheduled(fixedRate = 60000)
-    private void cleanExpiredEntries() {
+    public void cleanExpiredEntries() {
         cache.entrySet().removeIf(entry -> isExpired(entry.getValue()));
     }
 
