@@ -126,9 +126,6 @@ public class CollectionService {
         if (cached != null) {
             return cached;
         }
-        if (!userRepository.existsById(userId)) {
-            throw new EntityNotFoundException("User not found with id: " + userId);
-        }
         List<CollectionDto> result = collectionRepository.findByUserId(userId)
                 .stream()
                 .map(this::convertToDto)
@@ -165,9 +162,6 @@ public class CollectionService {
                     .collect(Collectors.toList());
         } else {
             throw new IllegalArgumentException("At least one parameter must be provided");
-        }
-        if (result.isEmpty()) {
-            throw new EntityNotFoundException("Collection not found");
         }
         cacheService.put(cacheKey, result);
         return result;
@@ -212,9 +206,6 @@ public class CollectionService {
 
             AnimeDto animeDto = new AnimeDto(animeId, animeTitle, animeGenre, animeYear);
             collectionDto.getAnimes().add(animeDto);
-        }
-        if (collectionMap.isEmpty()) {
-            throw new EntityNotFoundException("Collection not found");
         }
         List<CollectionWithAnimeDto> result = new ArrayList<>(collectionMap.values());
         cacheService.put(cacheKey, result);
