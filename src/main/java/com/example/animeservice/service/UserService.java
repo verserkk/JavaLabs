@@ -93,7 +93,6 @@ public class UserService {
         }
         userRepository.deleteById(id);
 
-        // Invalidate cache entries related to this user
         cacheService.invalidate("user_" + id);
         cacheService.invalidateByPrefix("user_search_");
         cacheService.invalidateByPrefix("user_collections_");
