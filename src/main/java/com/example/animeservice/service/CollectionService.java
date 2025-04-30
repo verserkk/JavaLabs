@@ -1,5 +1,6 @@
 package com.example.animeservice.service;
 
+import com.example.animeservice.cache.CacheService;
 import com.example.animeservice.dto.AnimeDto;
 import com.example.animeservice.dto.CollectionDto;
 import com.example.animeservice.dto.CollectionWithAnimeDto;
@@ -111,7 +112,6 @@ public class CollectionService {
         }
         collectionRepository.deleteById(id);
 
-        // Invalidate cache entries related to this collection
         cacheService.invalidate("collection_" + id);
         cacheService.invalidateByPrefix("collections_user_");
         cacheService.invalidateByPrefix("collection_search_");
@@ -238,5 +238,49 @@ public class CollectionService {
         cacheService.invalidateByPrefix("collection_search_");
         cacheService.invalidateByPrefix("collection_search_anime_");
         cacheService.invalidateByPrefix("user_collections_");
+    }
+
+    @Transactional
+    public List<CollectionDto> createCollections(List<CollectionDto> dtos) {
+        Map<Long, User> userMap = dtos.stream()
+                .map(CollectionDto::getUserId)
+                .distinct()
+                .collect(Collectors.toMap(
+                        userId -> userId,
+                        userId -> userRepository.findById(userId)
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                        "User not found with id: " + userId))
+                ));
+
+        Map<Long, List<Anime>> animeMap = dtos.stream()
+                .flatMap(dto -> dto.getAnimeIds().stream())
+                .distinct()
+                .collect(Collectors.toMap(
+                        animeId -> animeId,
+                        animeId -> animeRepository.findById(animeId)
+                                .map(List::of)
+                                .orElseThrow(() -> new EntityNotFoundException(
+                                        "Anime not found with id: " + animeId))
+                ));
+
+        List<Collection> collections = dtos.stream()
+                .map(dto -> {
+                    Collection collection = new Collection();
+                    collection.setName(dto.getName());
+                    collection.setUser(userMap.get(dto.getUserId()));
+                    collection.setAnimes(dto.getAnimeIds().stream()
+                            .flatMap(id -> animeMap.get(id).stream())
+                            .collect(Collectors.toList()));
+                    return collection;
+                })
+                .collect(Collectors.toList());
+
+        List<CollectionDto> result = collectionRepository.saveAll(collections)
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        invalidateCollectionCache();
+        return result;
     }
 }

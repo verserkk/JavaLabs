@@ -19,15 +19,11 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 public class ExceptionHandlerController {
 
     @ExceptionHandler(EntityNotFoundException.class)
-    @ApiResponses(value = {@ApiResponse(responseCode = "404",
+    @ApiResponses(value = {@ApiResponse(responseCode = "204",
             description = "Entity not found")
     })
-    public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
-        ErrorResponse response = new ErrorResponse();
-        response.setStatus(HttpStatus.NOT_FOUND.value());
-        response.setError("Not Found");
-        response.setMessage(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    public ResponseEntity<Object> handleEntityNotFound() {
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

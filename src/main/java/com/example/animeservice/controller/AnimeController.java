@@ -111,4 +111,17 @@ public class AnimeController {
     ) {
         return ResponseEntity.ok(animeService.searchAnimes(title, genre, year));
     }
+
+    @Operation(summary = "Create multiple anime",
+            description = "Creates multiple anime entities in a single request.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "201", description = "Anime list created",
+                    content = @Content(schema = @Schema(implementation = AnimeDto.class))),
+                           @ApiResponse(responseCode = "400", description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/bulk")
+    public ResponseEntity<List<AnimeDto>> createAnimes(@RequestBody List<AnimeDto> dtos) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(animeService.createAnimes(dtos));
+    }
 }

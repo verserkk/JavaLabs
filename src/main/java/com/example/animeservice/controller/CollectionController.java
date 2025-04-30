@@ -158,4 +158,22 @@ public class CollectionController {
                 collectionService.searchCollectionsByAnimeParams(title, genre, releaseYear);
         return ResponseEntity.ok(list);
     }
+
+    @Operation(summary = "Create multiple collections",
+            description = "Creates multiple collection entities in a single request.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "201",
+                                    description = "Collections list created",
+                    content = @Content(schema = @Schema(implementation = CollectionDto.class))),
+                           @ApiResponse(responseCode = "400", description = "Invalid input",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                           @ApiResponse(responseCode = "404",
+                                   description = "User or anime not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/bulk")
+    public ResponseEntity<List<CollectionDto>> createCollections(
+            @Valid @RequestBody List<CollectionDto> dtos) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(collectionService.createCollections(dtos));
+    }
 }

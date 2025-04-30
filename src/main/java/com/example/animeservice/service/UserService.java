@@ -1,5 +1,6 @@
 package com.example.animeservice.service;
 
+import com.example.animeservice.cache.CacheService;
 import com.example.animeservice.dto.AnimeDto;
 import com.example.animeservice.dto.CollectionWithAnimeDto;
 import com.example.animeservice.dto.UserDto;
@@ -130,7 +131,7 @@ public class UserService {
         return result;
     }
 
-    private UserDto convertToDto(User user) {
+    public UserDto convertToDto(User user) {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
@@ -157,7 +158,7 @@ public class UserService {
         return result;
     }
 
-    private UserWithCollectionsDto mapToUserWithCollectionsDto(User user) {
+    public UserWithCollectionsDto mapToUserWithCollectionsDto(User user) {
         UserWithCollectionsDto dto = new UserWithCollectionsDto();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
@@ -214,4 +215,5 @@ public class UserService {
         cacheService.invalidateByPrefix("user_collections_");
         cacheService.invalidateByPrefix("collections_user_");
     }
+
 }

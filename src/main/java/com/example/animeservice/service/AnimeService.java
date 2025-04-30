@@ -1,5 +1,6 @@
 package com.example.animeservice.service;
 
+import com.example.animeservice.cache.CacheService;
 import com.example.animeservice.dto.AnimeDto;
 import com.example.animeservice.exception.EntityNotFoundException;
 import com.example.animeservice.model.Anime;
@@ -119,4 +120,27 @@ public class AnimeService {
         cacheService.invalidateByPrefix("anime_search_");
         cacheService.invalidateByPrefix("collection_search_anime_");
     }
+
+    @Transactional
+    public List<AnimeDto> createAnimes(List<AnimeDto> dtos) {
+        List<Anime> animes = dtos.stream()
+                .map(dto -> {
+                    Anime anime = new Anime();
+                    anime.setTitle(dto.getTitle());
+                    anime.setGenre(dto.getGenre());
+                    anime.setReleaseYear(dto.getReleaseYear());
+                    return anime;
+                })
+                .collect(Collectors.toList());
+
+        List<AnimeDto> result = animeRepository.saveAll(animes)
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        invalidateAnimeCache();
+        return result;
+    }
+
+
 }
