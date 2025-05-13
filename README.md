@@ -131,3 +131,5 @@ mvn spring-boot:run
 ---
 
 **🎯 Цель проекта**: Упрощённая система для фанатов аниме с возможностью создания персональных коллекций.
+
+![Quality gate (https://sonarcloud.io/api/project_badges/quality_gate?project=splitmindq_calorie-counter)](https://sonarcloud.io/summary/new_code?id=splitmindq_calorie-counter)
