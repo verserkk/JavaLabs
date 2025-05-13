@@ -31,7 +31,7 @@ public class AsyncLogService {
     private final ConcurrentHashMap<String, String> logStatuses = new ConcurrentHashMap<>();
 
     @Async
-    public CompletableFuture<String> createLogFile(String date) {
+    public CompletableFuture<String> createLogFile(String date) throws InterruptedException {
         String logId = UUID.randomUUID().toString();
         logStatuses.put(logId, "IN_PROGRESS");
 
@@ -45,7 +45,7 @@ public class AsyncLogService {
         } catch (InterruptedException e) {
             logStatuses.put(logId, "FAILED");
             log.error("Log creation failed for date: {}", date, e);
-            return CompletableFuture.failedFuture(e);
+            throw new InterruptedException();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -111,7 +111,7 @@ public class AsyncLogService {
         try {
             return getLogFile(date).exists();
         } catch (Exception e) {
-            return false;
+            throw new RuntimeException(e);
         }
     }
 

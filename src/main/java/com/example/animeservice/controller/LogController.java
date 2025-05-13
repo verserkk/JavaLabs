@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ public class LogController {
                          @ApiResponse(responseCode = "400", description = "Invalid date format")})
     public CompletableFuture<ResponseEntity<LogCreateResponse>> createLogFile(
             @Parameter(description = "Date in yyyy-MM-dd format")
-            @RequestParam String date) {
+            @RequestParam String date) throws InterruptedException {
         log.info("Creating log file for date: {}", date);
         return asyncLogService.createLogFile(date)
                 .thenApply(LogCreateResponse::new)
@@ -65,7 +66,7 @@ public class LogController {
         try {
             File logFile = asyncLogService.getLogFile(date);
             return buildFileResponse(logFile, date);
-        } catch (Exception e) {
+        } catch (InterruptedException | IOException e) {
             log.error("Error downloading log file for date: {}", date, e);
             throw new RuntimeException("Error downloading log file", e);
         }
