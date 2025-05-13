@@ -42,10 +42,12 @@ public class AsyncLogService {
             createLogFileIfNotExists(logDate, fileName);
             logStatuses.put(logId, "COMPLETED");
             return CompletableFuture.completedFuture(logId);
-        } catch (Exception e) {
+        } catch (InterruptedException e) {
             logStatuses.put(logId, "FAILED");
             log.error("Log creation failed for date: {}", date, e);
             return CompletableFuture.failedFuture(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -57,7 +59,7 @@ public class AsyncLogService {
         return new LogStatusResponse(logId, status);
     }
 
-    public File getLogFile(String date) throws IOException {
+    public File getLogFile(String date) throws IOException, InterruptedException {
         LocalDate logDate = parseDate(date);
         String fileName = buildLogFilePath(logDate);
         File logFile = new File(fileName);
@@ -81,7 +83,8 @@ public class AsyncLogService {
         return LOG_PATH + "/" + LOG_FILE_PREFIX + date + LOG_FILE_EXTENSION;
     }
 
-    private void createLogFileIfNotExists(LocalDate date, String fileName) throws IOException {
+    private void createLogFileIfNotExists(LocalDate date, String fileName)
+            throws InterruptedException, IOException {
         File logFile = new File(fileName);
         if (!logFile.exists()) {
             ensureLogDirectoryExists();
