@@ -50,7 +50,7 @@ public class LogController {
     public ResponseEntity<LogStatusResponse> getLogStatus(
             @PathVariable String logId,
             @Parameter(description = "Date in yyyy-MM-dd format")
-            @RequestParam String date) {
+            @RequestParam String date) throws InterruptedException {
         log.info("Checking status for log ID: {} and date: {}", logId, date);
         return ResponseEntity.ok(asyncLogService.getLogStatus(logId, date));
     }
