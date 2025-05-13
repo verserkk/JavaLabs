@@ -51,7 +51,7 @@ public class AsyncLogService {
         }
     }
 
-    public LogStatusResponse getLogStatus(String logId, String date) {
+    public LogStatusResponse getLogStatus(String logId, String date) throws InterruptedException {
         String status = logStatuses.getOrDefault(logId, "NOT_FOUND");
         if ("COMPLETED".equals(status) && !verifyLogFileExists(date)) {
             status = "FAILED";
@@ -107,10 +107,12 @@ public class AsyncLogService {
         }
     }
 
-    private boolean verifyLogFileExists(String date) {
+    private boolean verifyLogFileExists(String date) throws InterruptedException {
         try {
             return getLogFile(date).exists();
-        } catch (Exception e) {
+        } catch (InterruptedException e) {
+            throw new InterruptedException();
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
