@@ -61,14 +61,17 @@ public class LogController {
                          @ApiResponse(responseCode = "404", description = "File not found")})
     public ResponseEntity<Resource> downloadLogFile(
             @Parameter(description = "Date in yyyy-MM-dd format")
-            @RequestParam String date) {
+            @RequestParam String date) throws InterruptedException, IOException {
         log.info("Downloading log file for date: {}", date);
         try {
             File logFile = asyncLogService.getLogFile(date);
             return buildFileResponse(logFile, date);
-        } catch (InterruptedException | IOException e) {
+        } catch (InterruptedException e) {
             log.error("Error downloading log file for date: {}", date, e);
-            throw new RuntimeException("Error downloading log file", e);
+            throw new InterruptedException();
+        } catch (IOException e) {
+            log.error("Error file is not for date: {}", date, e);
+            throw new IOException();
         }
     }
 
