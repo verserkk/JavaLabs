@@ -25,7 +25,7 @@ public class AnimeService {
     private final CacheService cacheService;
 
     public List<AnimeDto> getAllAnimes() {
-        return animeRepository.findAll(Sort.by("title"))
+        return animeRepository.findAll(Sort.by("id"))
                 .stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -141,6 +141,4 @@ public class AnimeService {
         invalidateAnimeCache();
         return result;
     }
-
-
 }

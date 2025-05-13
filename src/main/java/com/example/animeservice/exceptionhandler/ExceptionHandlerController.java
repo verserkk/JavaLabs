@@ -8,6 +8,7 @@ import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -39,7 +40,8 @@ public class ExceptionHandlerController {
         return ResponseEntity.badRequest().body(response);
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, MethodArgumentTypeMismatchException.class})
+    @ExceptionHandler({IllegalArgumentException.class, MethodArgumentTypeMismatchException.class,
+                       HttpMessageNotReadableException.class})
     @ApiResponses(value = {@ApiResponse(responseCode = "400",
             description = "Invalid argument")
     })

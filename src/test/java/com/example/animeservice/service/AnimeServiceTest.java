@@ -55,22 +55,18 @@ class AnimeServiceTest {
     @Test
     void getAllAnimes_ReturnsListOfAnimeDtos() {
         when(animeRepository.findAll(any(Sort.class))).thenReturn(Arrays.asList(anime));
-
         List<AnimeDto> result = animeService.getAllAnimes();
-
         assertEquals(1, result.size());
         assertEquals(animeDto, result.get(0));
-        verify(animeRepository).findAll(Sort.by("title"));
+        verify(animeRepository).findAll(Sort.by("id"));
     }
 
     @Test
     void getAllAnimes_EmptyList_ReturnsEmptyList() {
         when(animeRepository.findAll(any(Sort.class))).thenReturn(Collections.emptyList());
-
         List<AnimeDto> result = animeService.getAllAnimes();
-
         assertTrue(result.isEmpty());
-        verify(animeRepository).findAll(Sort.by("title"));
+        verify(animeRepository).findAll(Sort.by("id"));
     }
 
     @Test
